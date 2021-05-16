@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
+import json
 import os
 
 import gi
 import subprocess
+import requests
 from datetime import datetime
+from base64 import b64encode
 
 import const
 
@@ -112,20 +115,41 @@ class AboutLinuxLiteWindow(Gtk.Window):
 
     def on_check_for_update_click(self, button):
         subprocess.call("/usr/bin/lite-updates", stdin=None, stdout=None, stderr=None, shell=False)
-        pass
 
     def on_system_information_click(self, button):
         subprocess.call("hardinfo", stdin=None, stdout=None, stderr=None, shell=False)
-        pass
 
     def on_take_screenshot_click(self, button):
         size = self.get_size()
         pixbuf = Gdk.pixbuf_get_from_window(self.get_window(), 0, 0, size[0], size[1])
-        path = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                            './screen_shot_%s.png') % datetime.now().strftime("%Y%m%d%H%M%S")
+        file_name = "screen_shot_%s.png" % datetime.now().strftime("%Y%m%d%H%M%S")
+        path = os.path.join(os.path.dirname(os.path.realpath(__file__)), file_name)
         pixbuf.savev(path, "png", [], [])
-        os.system("xdg-open %s" % path)
-        pass
+        with open(path, "rb") as a_file:
+            headers = {"Authorization": "Client-ID 081eb604a665799"}
+            url = "https://api.imgur.com/3/upload"
+
+            response = requests.post(
+                url,
+                headers=headers,
+                data={
+                    'image': b64encode(a_file.read()),
+                    'type': 'base64',
+                    'name': file_name,
+                    'title': 'linux screenshot:' + file_name
+                }
+            )
+            if response.ok:
+                data = json.loads(response.content)["data"]
+                os.system("xdg-open %s" % data["link"])
+
+            else:
+                md = Gtk.MessageDialog(parent=self,
+                                       flags=Gtk.DialogFlags.MODAL,
+                                       type=Gtk.MessageType.ERROR,
+                                       buttons=Gtk.ButtonsType.OK,
+                                       message_format="%s:%s" % (response.status_code, response.content))
+                md.run()
 
 
 win = AboutLinuxLiteWindow()
