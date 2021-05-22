@@ -6,7 +6,6 @@ from datetime import datetime
 import cpuinfo
 import subprocess
 import psutil
-import socket
 
 
 def get_memory_size_gb():
@@ -26,11 +25,26 @@ def lsb_release():
 # Network
 def get_network_info():
     net_stats = psutil.net_if_stats()
-    return ";".join(["%s-%s" % (k, k) for (k, v) in net_stats.items()])
+    return "    \n".join([subprocess.getoutput("lspci | awk '/Network controller/{print $4,$5,$6,$7,$8,$9}'").strip(),
+                          subprocess.getoutput("lspci | awk '/Ethernet controller/{print $4,$5,$6,$7,$8,$9}'")])
 
 
 def get_disk_info():
-    return ";".join([item.device for item in psutil.disk_partitions()])
+    return "\t\n".join([item.device for item in psutil.disk_partitions()])
+
+
+def get_audio_info():
+    return "\t\n".join(
+        subprocess.getoutput("lspci | awk '/Audio device/{print $4,$5,$6,$7,$8,$9}'").strip().split("\n"))
+
+
+def get_motherboard_info():
+    return "\t\n".join(subprocess.getoutput("inxi -c 0 -M | awk '/Machine/{print $7,$8,$9}'").strip().split("\n"))
+
+
+def get_video_info():
+    return "\t\n".join(
+        subprocess.getoutput("lspci | awk '/VGA compatible controller/{print $5,$6,$7,$8,$9,$10}'").strip().split("\n"))
 
 
 GPL2_CONTENT = '''                    GNU GENERAL PUBLIC LICENSE
@@ -386,12 +400,10 @@ ABOUT_SYSTEM_ITEMS = (
     "<span>Hostname: %s</span>" % platform.node(),
     "<span>Kernel: %s %s (%s)</span>" % (platform.system(), platform.release(), platform.machine()),
     "<span>Processor: %s</span>" % cpuinfo.get_cpu_info()["brand_raw"],
-    "<span>Motherboard: %s</span>" % "unknown",
+    "<span>Motherboard: %s</span>" % get_motherboard_info(),
     "<span>Memory installed: %s GB</span>" % get_memory_size_gb(),
-    "<span>Graphics chip/s: %s </span>" % subprocess.check_output(
-        r"lspci | grep ' VGA ' | cut -d' ' -f1 | xargs -i lspci -v -s {} | head -n1",
-        universal_newlines=True, shell=True)[:40] + '...',
-    "<span>Sound: %s</span>" % "unknown",
+    "<span>Graphics chip/s: %s </span>" % get_video_info()[:40] + '...',
+    "<span>Sound: %s</span>" % get_audio_info(),
     "<span>Storage: %s: </span>" % get_disk_info(),
     "<span>Network: %s</span>" % get_network_info(),
     "<span>Desktop Environment: %s %s</span>" % (os.getenv("DESKTOP_SESSION"), identify_xfce_version()),

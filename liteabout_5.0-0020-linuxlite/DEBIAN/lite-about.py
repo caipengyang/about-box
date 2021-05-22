@@ -33,7 +33,7 @@ class AboutLinuxLiteWindow(Gtk.Window):
         grid = Gtk.Grid(column_spacing=10, row_spacing=10)
 
         logo = Gtk.Image()
-        logo.set_from_file(os.path.join(os.path.dirname(os.path.realpath(__file__)), './linux_lite_dark_logo.png'))
+        logo.set_from_file(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'linux_lite_dark_logo.png'))
         pixbuf = logo.get_pixbuf()
         scaled_buf = pixbuf.scale_simple(64, 64, GdkPixbuf.InterpType.BILINEAR)
         logo.set_from_pixbuf(scaled_buf)
@@ -41,7 +41,7 @@ class AboutLinuxLiteWindow(Gtk.Window):
 
         label = Gtk.Label()
         label.set_markup(const.ABOUT_SYSTEM.strip())
-        label.set_selectable(True)
+        label.set_selectable(False)
         grid.attach(label, 0, 0, 5, 10)
 
         check_for_update_button = Gtk.Button.new_with_label("Check For Update")
@@ -67,7 +67,7 @@ class AboutLinuxLiteWindow(Gtk.Window):
         label.set_text(const.GPL2_CONTENT.strip())
         label.set_margin_left(20)
         label.set_margin_right(20)
-        label.set_selectable(True)
+        label.set_selectable(False)
         label.select_region(0, 0)
 
         scrolled_window = Gtk.ScrolledWindow()
@@ -100,7 +100,7 @@ class AboutLinuxLiteWindow(Gtk.Window):
 
         label = Gtk.Label()
         label.set_markup(const.LINUX_LITE_COMMUNITY.strip())
-        label.set_selectable(True)
+        label.set_selectable(False)
         label.select_region(0, 0)
         grid.attach(label, 0, 4, 1, 1)
         stack.add_titled(grid, "about", "About Us")
