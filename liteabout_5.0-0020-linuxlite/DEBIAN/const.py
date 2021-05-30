@@ -8,6 +8,16 @@ import subprocess
 import psutil
 
 
+def capture_error(func):
+    def inner_function(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except (KeyError, Exception) as e:
+            print(f"{func.__name__} error. context:%s" % str(e))
+            return "unknown"
+    return inner_function
+
+
 def get_memory_size_gb():
     meminfo = dict((i.split()[0].rstrip(':'), int(i.split()[1])) for i in open('/proc/meminfo').readlines())
     return '{:.2f}'.format(meminfo['MemTotal'] / 1024.0 / 1024)  # e.g. 3921852
@@ -45,6 +55,11 @@ def get_motherboard_info():
 def get_video_info():
     return "\t\n".join(
         subprocess.getoutput("lspci | awk '/VGA compatible controller/{print $5,$6,$7,$8,$9,$10}'").strip().split("\n"))
+
+
+@capture_error
+def get_cpu_info():
+    return cpuinfo.get_cpu_info()["brand_raw"]
 
 
 GPL2_CONTENT = '''                    GNU GENERAL PUBLIC LICENSE
@@ -399,7 +414,7 @@ ABOUT_SYSTEM_ITEMS = (
     "<span>Date: %s</span>" % datetime.now().strftime("%m/%d/%Y, %H:%M"),
     "<span>Hostname: %s</span>" % platform.node(),
     "<span>Kernel: %s %s (%s)</span>" % (platform.system(), platform.release(), platform.machine()),
-    "<span>Processor: %s</span>" % cpuinfo.get_cpu_info()["brand_raw"],
+    "<span>Processor: %s</span>" % get_cpu_info(),
     "<span>Motherboard: %s</span>" % get_motherboard_info(),
     "<span>Memory installed: %s GB</span>" % get_memory_size_gb(),
     "<span>Graphics chip/s: %s </span>" % get_video_info()[:40] + '...',
