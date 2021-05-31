@@ -6,10 +6,6 @@ name = "pypi"
 [packages]
 pycairo = "*"
 pygobject = "*"
-formiko = "*"
-py-cpuinfo = "*"
-psutil = "*"
-gputil = "*"
 requests = "*"
 
 [dev-packages]

@@ -3,9 +3,9 @@
 import platform
 import os
 from datetime import datetime
-import cpuinfo
 import subprocess
-import psutil
+import json
+import sys
 
 
 def capture_error(func):
@@ -13,9 +13,19 @@ def capture_error(func):
         try:
             return func(*args, **kwargs)
         except (KeyError, Exception) as e:
-            print(f"{func.__name__} error. context:%s" % str(e))
+            print("%s error. context:%s" % (func.__name__, str(e)))
             return "unknown"
     return inner_function
+
+
+def get_cmd_output(cmd):
+    # python2
+    if sys.version_info.major == 2:
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+        stdout, stderr = process.communicate()
+        return stdout.strip()
+    else:
+        return subprocess.getoutput(cmd).strip()
 
 
 def get_memory_size_gb():
@@ -24,42 +34,45 @@ def get_memory_size_gb():
 
 
 def identify_xfce_version():
-    return subprocess.getoutput("xfce4-panel --version 2> /dev/null | grep -i panel | awk '{print $2}'")
+    return get_cmd_output("xfce4-panel --version 2> /dev/null | grep -i panel | awk '{print $2}'")
 
 
 def lsb_release():
     return {line.split(":")[0].strip(): line.split(":")[1].strip()
-            for line in subprocess.getoutput("lsb_release -a 2> /dev/null").strip().split("\n")}
+            for line in get_cmd_output("lsb_release -a 2> /dev/null").strip().split("\n")}
 
 
 # Network
 def get_network_info():
-    net_stats = psutil.net_if_stats()
-    return "    \n".join([subprocess.getoutput("lspci | awk '/Network controller/{print $4,$5,$6,$7,$8,$9}'").strip(),
-                          subprocess.getoutput("lspci | awk '/Ethernet controller/{print $4,$5,$6,$7,$8,$9}'")])
+    return "    \n".join([get_cmd_output("lspci | awk '/Network controller/{print $4,$5,$6,$7,$8,$9}'").strip(),
+                          get_cmd_output("lspci | awk '/Ethernet controller/{print $4,$5,$6,$7,$8,$9}'")])
 
 
+@capture_error
 def get_disk_info():
-    return "\t\n".join([item.device for item in psutil.disk_partitions()])
+    data = json.loads(get_cmd_output("lsblk -J").strip()).get("blockdevices", [])
+    return "\t".join(["%s(%s)" % (item.get("name", "unknown"), item.get("size", "unknown")) for item in data])
 
 
 def get_audio_info():
     return "\t\n".join(
-        subprocess.getoutput("lspci | awk '/Audio device/{print $4,$5,$6,$7,$8,$9}'").strip().split("\n"))
+        get_cmd_output("lspci | awk '/Audio device/{print $4,$5,$6,$7,$8,$9}'").strip().split("\n"))
 
 
 def get_motherboard_info():
-    return "\t\n".join(subprocess.getoutput("inxi -c 0 -M | awk '/Machine/{print $7,$8,$9}'").strip().split("\n"))
+    return "\t\n".join(get_cmd_output("inxi -c 0 -M | awk '/Machine/{print $7,$8,$9}'").strip().split("\n"))
 
 
 def get_video_info():
     return "\t\n".join(
-        subprocess.getoutput("lspci | awk '/VGA compatible controller/{print $5,$6,$7,$8,$9,$10}'").strip().split("\n"))
+        get_cmd_output("lspci | awk '/VGA compatible controller/{print $5,$6,$7,$8,$9,$10}'").strip().split("\n"))
 
 
 @capture_error
 def get_cpu_info():
-    return cpuinfo.get_cpu_info()["brand_raw"]
+    data = json.loads(get_cmd_output("lscpu -J").strip()).get("lscpu", [])
+    data = list(filter(lambda item: item.get("field", "") == "Model name:", data))
+    return "\r\n".join([item.get("data") for item in filter(lambda item: item.get("field", "") == "Model name:", data)])
 
 
 GPL2_CONTENT = '''                    GNU GENERAL PUBLIC LICENSE
@@ -419,7 +432,7 @@ ABOUT_SYSTEM_ITEMS = (
     "<span>Memory installed: %s GB</span>" % get_memory_size_gb(),
     "<span>Graphics chip/s: %s </span>" % get_video_info()[:40] + '...',
     "<span>Sound: %s</span>" % get_audio_info(),
-    "<span>Storage: %s: </span>" % get_disk_info(),
+    "<span>Storage: %s</span>" % get_disk_info(),
     "<span>Network: %s</span>" % get_network_info(),
     "<span>Desktop Environment: %s %s</span>" % (os.getenv("DESKTOP_SESSION"), identify_xfce_version()),
     "<span>Base: %s(%s) %s</span>" % (lsb_release()["Distributor ID"],
