@@ -1,4 +1,24 @@
 #!/usr/bin/env python3
+# -*- coding:utf-8 -*-
+#
+# Copyright © 2012-2013 "Korora Project" <dev@kororaproject.org>
+# Copyright © 2013-2015 "Manjaro Linux" <support@manjaro.org>
+# Copyright © 2014-2020 "Jerry Bezencon" <valtam@linuxliteos.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the temms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+
 import json
 import os
 
@@ -32,6 +52,7 @@ class AboutLinuxLiteWindow(Gtk.Window):
 
         grid = Gtk.Grid(column_spacing=10, row_spacing=10)
 
+        # load linux lite logo
         logo = Gtk.Image()
         logo.set_from_file(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'linux_lite_dark_logo.png'))
         pixbuf = logo.get_pixbuf()
@@ -44,20 +65,24 @@ class AboutLinuxLiteWindow(Gtk.Window):
         label.set_selectable(False)
         grid.attach(label, 0, 0, 5, 10)
 
+        # check for update
         check_for_update_button = Gtk.Button.new_with_label("Check For Update")
         check_for_update_button.connect("clicked", self.on_check_for_update_click)
         grid.attach(check_for_update_button, 0, 10, 1, 1)
 
+        # system information
         system_information_button = Gtk.Button.new_with_label("System Information")
         system_information_button.connect("clicked", self.on_system_information_click)
         grid.attach_next_to(system_information_button, check_for_update_button, Gtk.PositionType.RIGHT, 1, 1)
 
+        # take screenshot
         take_screenshot_button = Gtk.Button.new_with_label("Screenshot")
         take_screenshot_button.connect("clicked", self.on_take_screenshot_click)
         grid.attach_next_to(take_screenshot_button, system_information_button, Gtk.PositionType.RIGHT, 1, 1)
 
         stack.add_titled(grid, "system", "System")
 
+        # license
         grid = Gtk.Grid(column_homogeneous=True, column_spacing=100)
         label = Gtk.Label()
         label.set_markup("<big>Licence GPLv2</big>")
@@ -88,6 +113,7 @@ class AboutLinuxLiteWindow(Gtk.Window):
         # add the label to the scrolledwindow
         # label.set_size(scrolled_window.get_default_size())
 
+        # about us
         grid = Gtk.Grid(column_homogeneous=True, column_spacing=100, row_spacing=5)
 
         for (index, uri) in enumerate((
@@ -120,12 +146,16 @@ class AboutLinuxLiteWindow(Gtk.Window):
         subprocess.call("hardinfo", stdin=None, stdout=None, stderr=None, shell=False)
 
     def on_take_screenshot_click(self, button):
+        """take a screenshot and upload the image to imgur."""
         size = self.get_size()
+        # take screenshot
         pixbuf = Gdk.pixbuf_get_from_window(self.get_window(), 0, 0, size[0], size[1])
         file_name = "screen_shot_%s.png" % datetime.now().strftime("%Y%m%d%H%M%S")
         path = os.path.join(os.path.dirname(os.path.realpath(__file__)), file_name)
         pixbuf.savev(path, "png", [], [])
         with open(path, "rb") as a_file:
+
+            # upload to imgur using api. See https://api.imgur.com/ for more detailed info.
             headers = {"Authorization": "Client-ID 081eb604a665799"}
             url = "https://api.imgur.com/3/upload"
 

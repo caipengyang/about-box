@@ -1,4 +1,23 @@
 #!/usr/bin/env python3
+# -*- coding:utf-8 -*-
+#
+# Copyright © 2012-2013 "Korora Project" <dev@kororaproject.org>
+# Copyright © 2013-2015 "Manjaro Linux" <support@manjaro.org>
+# Copyright © 2014-2020 "Jerry Bezencon" <valtam@linuxliteos.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the temms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import platform
 import os
@@ -9,6 +28,7 @@ import sys
 
 
 def capture_error(func):
+    """this function is used for capture unknown errors and print the error for future analysis"""
     def inner_function(*args, **kwargs):
         try:
             return func(*args, **kwargs)
@@ -19,57 +39,67 @@ def capture_error(func):
 
 
 def get_cmd_output(cmd):
-    # python2
+    """ execute a command and return std output. compatible with python2"""
     if sys.version_info.major == 2:
+        # python2
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
         stdout, stderr = process.communicate()
         return stdout.strip()
     else:
+        # python3
         return subprocess.getoutput(cmd).strip()
 
 
 def get_memory_size_gb():
+    """open /proc/meminfo and calculate memory info"""
     meminfo = dict((i.split()[0].rstrip(':'), int(i.split()[1])) for i in open('/proc/meminfo').readlines())
     return '{:.2f}'.format(meminfo['MemTotal'] / 1024.0 / 1024)  # e.g. 3921852
 
 
 def identify_xfce_version():
+    """call xface4-panel to get xface version info"""
     return get_cmd_output("xfce4-panel --version 2> /dev/null | grep -i panel | awk '{print $2}'")
 
 
 def lsb_release():
+    """call 'lsb_release command' to get version info"""
     return {line.split(":")[0].strip(): line.split(":")[1].strip()
             for line in get_cmd_output("lsb_release -a 2> /dev/null").strip().split("\n")}
 
 
-# Network
 def get_network_info():
+    """get network info"""
     return "    \n".join([get_cmd_output("lspci | awk '/Network controller/{print $4,$5,$6,$7,$8,$9}'").strip(),
                           get_cmd_output("lspci | awk '/Ethernet controller/{print $4,$5,$6,$7,$8,$9}'")])
 
 
 @capture_error
 def get_disk_info():
+    """get disk storage info"""
     data = json.loads(get_cmd_output("lsblk -J").strip()).get("blockdevices", [])
     return "\t".join(["%s(%s)" % (item.get("name", "unknown"), item.get("size", "unknown")) for item in data])
 
 
 def get_audio_info():
+    """get audio info using 'lspci' command"""
     return "\t\n".join(
         get_cmd_output("lspci | awk '/Audio device/{print $4,$5,$6,$7,$8,$9}'").strip().split("\n"))
 
 
 def get_motherboard_info():
+    """get motherboard info using 'inxi' command"""
     return "\t\n".join(get_cmd_output("inxi -c 0 -M | awk '/Machine/{print $7,$8,$9}'").strip().split("\n"))
 
 
 def get_video_info():
+    """get video info using 'lspci' command"""
     return "\t\n".join(
         get_cmd_output("lspci | awk '/VGA compatible controller/{print $5,$6,$7,$8,$9,$10}'").strip().split("\n"))
 
 
 @capture_error
 def get_cpu_info():
+    """get cpu info using 'lscpu' command"""
     data = json.loads(get_cmd_output("lscpu -J").strip()).get("lscpu", [])
     data = list(filter(lambda item: item.get("field", "") == "Model name:", data))
     return "\r\n".join([item.get("data") for item in filter(lambda item: item.get("field", "") == "Model name:", data)])
